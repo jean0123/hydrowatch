@@ -19,7 +19,7 @@ def generate_summary(station, readings):
 
     client = anthropic.Anthropic(api_key=api_key)
     message = client.messages.create(
-        model="claude-sonnet-4-5-20250514",
+        model="claude-3-haiku-20240307",
         max_tokens=512,
         messages=[
             {
