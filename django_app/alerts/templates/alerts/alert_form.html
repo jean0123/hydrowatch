@@ -4,42 +4,44 @@
 {% block nav_alerts %}active{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-lg-6 mx-auto">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'alerts:alert_list' %}">Alerts</a></li>
-                <li class="breadcrumb-item active">Create Rule</li>
-            </ol>
+<div class="row">
+    <div class="col-lg-6 mx-auto animate-in">
+        <nav class="mb-3" style="font-size: 0.8rem;">
+            <a href="{% url 'alerts:alert_list' %}" style="color: var(--hw-text-muted); text-decoration: none;">Alerts</a>
+            <span style="color: var(--hw-text-muted); margin: 0 8px;">/</span>
+            <span style="color: var(--hw-text);">Create Rule</span>
         </nav>
 
-        <div class="card">
-            <div class="card-header"><i class="bi bi-bell-plus"></i> New Alert Rule</div>
+        <div class="glass-card">
+            <div class="card-header">
+                <i class="bi bi-bell-plus" style="color: var(--hw-blue);"></i> New Alert Rule
+            </div>
             <div class="card-body">
-                <p class="text-muted">
-                    Set a threshold condition. When a new reading meets this condition,
-                    an alert event is created and a notification is sent.
+                <p style="color: var(--hw-text-muted); font-size: 0.85rem;">
+                    Set a threshold condition. When a new reading matches, an alert is triggered and a notification sent.
                 </p>
                 <form method="post">
                     {% csrf_token %}
                     {% for field in form %}
                     <div class="mb-3">
-                        <label for="{{ field.id_for_label }}" class="form-label fw-bold">
+                        <label for="{{ field.id_for_label }}" class="form-label" style="font-weight: 600; font-size: 0.85rem;">
                             {{ field.label }}
                         </label>
                         {{ field }}
                         {% if field.help_text %}
-                        <div class="form-text">{{ field.help_text }}</div>
+                        <div class="form-text" style="color: var(--hw-text-muted);">{{ field.help_text }}</div>
                         {% endif %}
                         {% for error in field.errors %}
-                        <div class="invalid-feedback d-block">{{ error }}</div>
+                        <div style="color: var(--hw-rose); font-size: 0.8rem; margin-top: 4px;">{{ error }}</div>
                         {% endfor %}
                     </div>
                     {% endfor %}
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle"></i> Create Alert Rule
-                    </button>
-                    <a href="{% url 'alerts:alert_list' %}" class="btn btn-outline-secondary ms-2">Cancel</a>
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-glow">
+                            <i class="bi bi-check-circle"></i> Create Rule
+                        </button>
+                        <a href="{% url 'alerts:alert_list' %}" class="btn btn-glass">Cancel</a>
+                    </div>
                 </form>
             </div>
         </div>

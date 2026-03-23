@@ -38,14 +38,13 @@ def report_generate(request):
         ).order_by("timestamp")
     )
 
-    # Get AI summary if available
-    ai_summary = ""
-    try:
-        from ai_service.summarizer import generate_summary
+    # Get AI summary — falls back to statistical summary on any error
+    from reports.summarizer import generate_summary, _generate_fallback_summary
 
+    try:
         ai_summary = generate_summary(station, readings)
     except Exception:
-        ai_summary = "AI summary unavailable."
+        ai_summary = _generate_fallback_summary(station, readings)
 
     pdf_buffer = generate_station_report(
         station, readings, ai_summary, date_from, date_to

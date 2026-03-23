@@ -4,25 +4,27 @@
 {% block nav_alerts %}active{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center">
+<div class="page-header mb-4 animate-in">
+    <div class="d-flex justify-content-between align-items-start">
         <div>
-            <h2><i class="bi bi-bell"></i> Alert Rules</h2>
-            <p class="text-muted">Configure threshold-based alerts for monitored stations</p>
+            <h2>Alert Rules</h2>
+            <p>Configure threshold-based alerts for monitored stations</p>
         </div>
-        <a href="{% url 'alerts:alert_create' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> New Alert Rule
+        <a href="{% url 'alerts:alert_create' %}" class="btn btn-glow">
+            <i class="bi bi-plus-circle"></i> New Rule
         </a>
     </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-lg-7">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-sliders"></i> Active Rules</div>
-            <div class="card-body p-0">
+<div class="row g-3">
+    <div class="col-lg-7 animate-in">
+        <div class="glass-card">
+            <div class="card-header">
+                <i class="bi bi-sliders" style="color: var(--hw-blue);"></i> Active Rules
+            </div>
+            <div>
                 <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
                             <th>Station</th>
                             <th>Condition</th>
@@ -34,22 +36,20 @@
                     <tbody>
                         {% for rule in rules %}
                         <tr>
-                            <td>{{ rule.station.name }}</td>
-                            <td>
-                                <code>{{ rule.get_metric_display }} {{ rule.get_operator_display }} {{ rule.threshold }}</code>
-                            </td>
-                            <td><small>{{ rule.email }}</small></td>
+                            <td class="fw-semibold">{{ rule.station.name }}</td>
+                            <td><code style="color: var(--hw-cyan); background: rgba(6,182,212,0.1); padding: 2px 8px; border-radius: 4px;">{{ rule.get_metric_display }} {{ rule.get_operator_display }} {{ rule.threshold }}</code></td>
+                            <td style="font-size: 0.8rem;">{{ rule.email }}</td>
                             <td>
                                 {% if rule.is_active %}
-                                <span class="badge bg-success">Active</span>
+                                <span class="badge-active">Active</span>
                                 {% else %}
-                                <span class="badge bg-secondary">Paused</span>
+                                <span class="badge-inactive">Paused</span>
                                 {% endif %}
                             </td>
                             <td>
                                 <form method="post" action="{% url 'alerts:alert_delete' rule.pk %}" class="d-inline">
                                     {% csrf_token %}
-                                    <button class="btn btn-sm btn-outline-danger" title="Delete">
+                                    <button class="btn btn-sm" style="color: var(--hw-rose); background: rgba(244,63,94,0.1); border: none; border-radius: 8px;">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
@@ -57,7 +57,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">
+                            <td colspan="5" class="text-center py-4" style="color: var(--hw-text-muted);">
                                 No alert rules configured yet.
                             </td>
                         </tr>
@@ -68,28 +68,28 @@
         </div>
     </div>
 
-    <div class="col-lg-5">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-clock-history"></i> Recent Alert Events</div>
-            <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
-                <div class="list-group list-group-flush">
-                    {% for event in recent_events %}
-                    <div class="list-group-item">
-                        <div class="d-flex justify-content-between">
-                            <strong>{{ event.rule.station.name }}</strong>
-                            <small class="text-muted">{{ event.created_at|timesince }} ago</small>
-                        </div>
-                        <small>{{ event.message }}</small>
-                        {% if event.notified %}
-                        <span class="badge bg-info">Notified</span>
-                        {% endif %}
+    <div class="col-lg-5 animate-in">
+        <div class="glass-card" style="height: 100%;">
+            <div class="card-header">
+                <i class="bi bi-clock-history" style="color: var(--hw-amber);"></i> Recent Events
+            </div>
+            <div style="max-height: 400px; overflow-y: auto;">
+                {% for event in recent_events %}
+                <div class="station-item" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                    <div class="d-flex justify-content-between w-100">
+                        <span class="station-name">{{ event.rule.station.name }}</span>
+                        <small style="color: var(--hw-text-muted);">{{ event.created_at|timesince }} ago</small>
                     </div>
-                    {% empty %}
-                    <div class="list-group-item text-center text-muted py-4">
-                        No alert events yet.
-                    </div>
-                    {% endfor %}
+                    <small style="color: var(--hw-text-muted);">{{ event.message }}</small>
+                    {% if event.notified %}
+                    <span style="font-size:0.65rem; background: rgba(59,130,246,0.12); color: var(--hw-blue); padding: 2px 8px; border-radius: 10px;">Notified</span>
+                    {% endif %}
                 </div>
+                {% empty %}
+                <div class="p-4 text-center" style="color: var(--hw-text-muted);">
+                    No alert events yet.
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
