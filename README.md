@@ -102,9 +102,20 @@ A full-stack platform for ingesting, visualizing, and analyzing real-time hydrom
 
 ## Screenshots
 
-| Dashboard | Station Detail | Reports |
-|-----------|---------------|---------|
-| Dark-themed map + charts | Hydrograph + readings table | AI-generated PDF reports |
+### Dashboard
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Station Detail — Hydrograph & Readings
+![Station Detail](docs/screenshots/station-detail.png)
+
+### Reports — AI-Powered PDF Generation
+![Reports](docs/screenshots/reports.png)
+
+### PDF Report Output
+![PDF Report](docs/screenshots/pdf-report.png)
+
+### Django Admin Panel
+![Admin](docs/screenshots/admin.png)
 
 ## Quick Start
 
@@ -140,7 +151,7 @@ docker compose exec django python manage.py createsuperuser
 | **Dashboard** | http://localhost | Main monitoring interface |
 | **Django Admin** | http://localhost/admin/ | Database management |
 | **REST API** | http://localhost/api/ | Browsable DRF API |
-| **Ingestion Docs** | http://localhost:8001/docs | FastAPI Swagger UI |
+| **Ingestion Docs** | http://localhost/docs | FastAPI Swagger UI (proxied via Nginx) |
 
 ## Project Structure
 

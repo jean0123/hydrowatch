@@ -106,6 +106,16 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    "ingest-all-stations-hourly": {
+        "task": "dashboard.tasks.ingest_all_stations",
+        "schedule": 3600,  # every hour
+    },
+    "evaluate-alerts-hourly": {
+        "task": "dashboard.tasks.evaluate_alerts",
+        "schedule": 3660,  # 1 minute after ingestion
+    },
+}
 
 # REST Framework
 REST_FRAMEWORK = {
