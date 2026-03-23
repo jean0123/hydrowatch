@@ -1,0 +1,164 @@
+import io
+from datetime import datetime
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import (
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+
+
+def generate_station_report(station, readings, ai_summary="", date_from=None, date_to=None):
+    """Generate a professional PDF report for a station's water level data.
+
+    Returns a BytesIO buffer containing the PDF.
+    """
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=0.75 * inch,
+        leftMargin=0.75 * inch,
+        topMargin=0.75 * inch,
+        bottomMargin=0.75 * inch,
+    )
+
+    styles = getSampleStyleSheet()
+    brand_blue = colors.HexColor("#1a5276")
+
+    title_style = ParagraphStyle(
+        "CustomTitle",
+        parent=styles["Title"],
+        textColor=brand_blue,
+        fontSize=22,
+        spaceAfter=6,
+    )
+    subtitle_style = ParagraphStyle(
+        "CustomSubtitle",
+        parent=styles["Normal"],
+        textColor=colors.grey,
+        fontSize=11,
+        spaceAfter=20,
+    )
+    heading_style = ParagraphStyle(
+        "CustomHeading",
+        parent=styles["Heading2"],
+        textColor=brand_blue,
+        spaceBefore=16,
+        spaceAfter=8,
+    )
+    body_style = ParagraphStyle(
+        "CustomBody",
+        parent=styles["Normal"],
+        fontSize=10,
+        leading=14,
+        spaceAfter=8,
+    )
+
+    elements = []
+
+    # Header
+    elements.append(Paragraph("HydroWatch", title_style))
+    elements.append(
+        Paragraph("Water Infrastructure Monitoring Report", subtitle_style)
+    )
+
+    # Station info
+    elements.append(Paragraph("Station Information", heading_style))
+    station_data = [
+        ["Station ID", station.station_id],
+        ["Name", station.name],
+        ["Province", station.province],
+        ["Coordinates", f"{station.latitude:.4f}°N, {station.longitude:.4f}°W"],
+    ]
+    if date_from and date_to:
+        station_data.append([
+            "Report Period",
+            f"{date_from:%Y-%m-%d %H:%M} to {date_to:%Y-%m-%d %H:%M}",
+        ])
+
+    info_table = Table(station_data, colWidths=[1.8 * inch, 4.5 * inch])
+    info_table.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#eaf2f8")),
+            ("TEXTCOLOR", (0, 0), (0, -1), brand_blue),
+            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 10),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.lightgrey),
+            ("ROWBACKGROUNDS", (1, 0), (-1, -1), [colors.white, colors.HexColor("#f8f9fa")]),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ])
+    )
+    elements.append(info_table)
+
+    # AI summary
+    if ai_summary:
+        elements.append(Paragraph("AI Analysis Summary", heading_style))
+        elements.append(Paragraph(ai_summary, body_style))
+
+    # Data table
+    if readings:
+        elements.append(Paragraph("Water Level Readings", heading_style))
+        table_data = [["Timestamp", "Water Level (m)", "Flow Rate (m³/s)"]]
+        for r in readings[:50]:  # Limit rows for PDF readability
+            table_data.append([
+                r.timestamp.strftime("%Y-%m-%d %H:%M"),
+                f"{r.water_level_m:.2f}",
+                f"{r.flow_rate_cms:.2f}" if r.flow_rate_cms else "N/A",
+            ])
+
+        data_table = Table(
+            table_data, colWidths=[2.2 * inch, 1.8 * inch, 1.8 * inch]
+        )
+        data_table.setStyle(
+            TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), brand_blue),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.lightgrey),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8f9fa")]),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ])
+        )
+        elements.append(data_table)
+
+        if len(readings) > 50:
+            elements.append(Spacer(1, 8))
+            elements.append(
+                Paragraph(
+                    f"<i>Showing 50 of {len(readings)} readings.</i>",
+                    body_style,
+                )
+            )
+
+    # Footer
+    elements.append(Spacer(1, 30))
+    footer_style = ParagraphStyle(
+        "Footer",
+        parent=styles["Normal"],
+        textColor=colors.grey,
+        fontSize=8,
+        alignment=1,
+    )
+    elements.append(
+        Paragraph(
+            f"Generated by HydroWatch on {datetime.now():%Y-%m-%d %H:%M} | Confidential",
+            footer_style,
+        )
+    )
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer

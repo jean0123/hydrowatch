@@ -1,0 +1,105 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Reports - HydroWatch{% endblock %}
+{% block nav_reports %}active{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-file-earmark-pdf"></i> Reports</h2>
+        <p class="text-muted">Generate and download professional PDF reports with AI-powered analysis</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Generate Report -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-plus-circle"></i> Generate Report</div>
+            <div class="card-body">
+                <form method="post" action="{% url 'reports:report_generate' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Station</label>
+                        <select name="station_id" class="form-select" required>
+                            <option value="">Select station...</option>
+                            {% for station in stations %}
+                            <option value="{{ station.id }}">{{ station.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Time Period</label>
+                        <select name="days" class="form-select">
+                            <option value="1">Last 24 Hours</option>
+                            <option value="7" selected>Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-cpu"></i> Generate Report with AI Summary
+                    </button>
+                </form>
+                <div class="mt-3 p-3 bg-light rounded">
+                    <small class="text-muted">
+                        <i class="bi bi-robot"></i>
+                        Reports include an AI-generated analysis powered by Claude,
+                        summarizing trends, anomalies, and key findings.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report History -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-clock-history"></i> Generated Reports</div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title</th>
+                            <th>Period</th>
+                            <th>Generated</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in reports %}
+                        <tr>
+                            <td>
+                                <strong>{{ report.title }}</strong>
+                                <br><small class="text-muted">{{ report.station.station_id }}</small>
+                            </td>
+                            <td>
+                                <small>
+                                    {{ report.date_from|date:"M d, Y" }} &ndash;
+                                    {{ report.date_to|date:"M d, Y" }}
+                                </small>
+                            </td>
+                            <td><small>{{ report.created_at|timesince }} ago</small></td>
+                            <td>
+                                {% if report.pdf_file %}
+                                <a href="{% url 'reports:report_download' report.pk %}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-download"></i> PDF
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                No reports generated yet. Use the form to create one.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

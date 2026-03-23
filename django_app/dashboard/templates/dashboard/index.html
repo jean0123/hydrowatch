@@ -1,0 +1,242 @@
+{% extends "dashboard/base.html" %}
+{% load json_filters %}
+
+{% block title %}HydroWatch - Dashboard{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-1"><i class="bi bi-speedometer2"></i> Monitoring Dashboard</h2>
+        <p class="text-muted">Real-time hydrometric monitoring across British Columbia</p>
+    </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row mb-4 g-3">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-value">{{ stations|length }}</div>
+            <div class="stat-label">Active Stations</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-value"><i class="bi bi-water text-primary"></i></div>
+            <div class="stat-label">Water Level Monitoring</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-value"><i class="bi bi-graph-up text-success"></i></div>
+            <div class="stat-label">Flow Rate Tracking</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-value"><i class="bi bi-bell text-warning"></i></div>
+            <div class="stat-label">Threshold Alerts</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Map -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-geo-alt"></i> Station Map
+            </div>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Station List -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-list-ul"></i> Stations
+            </div>
+            <div class="card-body p-0" style="max-height: 450px; overflow-y: auto;">
+                <div class="list-group list-group-flush">
+                    {% for station in stations %}
+                    <a href="{% url 'dashboard:station_detail' station.id %}"
+                       class="list-group-item list-group-item-action station-list-item"
+                       data-lat="{{ station.latitude }}"
+                       data-lng="{{ station.longitude }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ station.name }}</strong>
+                                <br><small class="text-muted">{{ station.station_id }} &bull; {{ station.province }}</small>
+                            </div>
+                            <span class="badge badge-active rounded-pill">Active</span>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="list-group-item text-center text-muted py-4">
+                        <i class="bi bi-info-circle"></i> No stations loaded yet.
+                        <br><small>Run the ingestion service to seed data.</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-graph-up"></i> Water Level Chart</span>
+                <div>
+                    <select id="chartStation" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                        <option value="">Select a station...</option>
+                        {% for station in stations %}
+                        <option value="{{ station.id }}">{{ station.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="chartDays" class="form-select form-select-sm d-inline-block ms-2" style="width: auto;">
+                        <option value="1">24 Hours</option>
+                        <option value="7" selected>7 Days</option>
+                        <option value="30">30 Days</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="waterLevelChart" height="100"></canvas>
+                <p id="chartPlaceholder" class="text-center text-muted py-5">
+                    <i class="bi bi-bar-chart-line"></i> Select a station to view water level data
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // --- Leaflet Map ---
+    const stationsGeoJSON = {{ stations_geojson|to_json }};
+
+    const map = L.map('map').setView([49.28, -122.95], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18,
+    }).addTo(map);
+
+    const stationIcon = L.divIcon({
+        className: 'custom-marker',
+        html: '<div style="background:#1a5276;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);"></div>',
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
+    });
+
+    if (stationsGeoJSON.features.length > 0) {
+        const geojsonLayer = L.geoJSON(stationsGeoJSON, {
+            pointToLayer: (feature, latlng) => L.marker(latlng, {icon: stationIcon}),
+            onEachFeature: (feature, layer) => {
+                const p = feature.properties;
+                layer.bindPopup(
+                    `<strong>${p.name}</strong><br>` +
+                    `ID: ${p.station_id}<br>` +
+                    `<a href="/station/${p.id}/">View Details &rarr;</a>`
+                );
+            }
+        }).addTo(map);
+        map.fitBounds(geojsonLayer.getBounds().pad(0.1));
+    }
+
+    // Highlight station on list hover
+    document.querySelectorAll('.station-list-item').forEach(item => {
+        item.addEventListener('mouseenter', () => {
+            const lat = parseFloat(item.dataset.lat);
+            const lng = parseFloat(item.dataset.lng);
+            map.setView([lat, lng], 13, {animate: true});
+        });
+    });
+
+    // --- Chart.js ---
+    let chart = null;
+    const chartCanvas = document.getElementById('waterLevelChart');
+    const placeholder = document.getElementById('chartPlaceholder');
+
+    async function loadChart() {
+        const stationId = document.getElementById('chartStation').value;
+        const days = document.getElementById('chartDays').value;
+        if (!stationId) return;
+
+        placeholder.style.display = 'none';
+        chartCanvas.style.display = 'block';
+
+        const resp = await fetch(`/station/${stationId}/chart-data/?days=${days}`);
+        const data = await resp.json();
+
+        if (chart) chart.destroy();
+
+        chart = new Chart(chartCanvas, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Water Level (m)',
+                        data: data.water_level,
+                        borderColor: '#2980b9',
+                        backgroundColor: 'rgba(41,128,185,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 1,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'Flow Rate (m³/s)',
+                        data: data.flow_rate,
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39,174,96,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 1,
+                        yAxisID: 'y1',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { tooltipFormat: 'PPpp' },
+                        title: { display: true, text: 'Time' },
+                    },
+                    y: {
+                        position: 'left',
+                        title: { display: true, text: 'Water Level (m)' },
+                    },
+                    y1: {
+                        position: 'right',
+                        title: { display: true, text: 'Flow Rate (m³/s)' },
+                        grid: { drawOnChartArea: false },
+                    },
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: data.station,
+                        font: { size: 16 },
+                    },
+                    legend: { position: 'bottom' },
+                },
+            }
+        });
+    }
+
+    document.getElementById('chartStation').addEventListener('change', loadChart);
+    document.getElementById('chartDays').addEventListener('change', loadChart);
+</script>
+{% endblock %}
