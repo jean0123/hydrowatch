@@ -1,100 +1,96 @@
 """
 cooldown_validators.py
 ======================
-Módulo autocontenido (solo stdlib, sin dependencias de Django) para validar
-el intervalo de cooldown de notificaciones de alerta.
+Pure-stdlib, Django-free validation for alert-rule cooldown intervals.
 
-Reglas de dominio:
-  - None  → devuelve el default (60 minutos).
-  - int o string numérico en [1, 1440] → devuelve el entero validado.
-  - Cualquier otro valor (0, negativo, no numérico, NaN, > 1440) → ValueError.
+A cooldown interval represents the minimum number of minutes that must
+pass between two consecutive notification emails for the same alert rule.
+Acceptable range: 1 – 1440 minutes (1 minute … 24 hours).
 """
 
 import math
 
-
 _DEFAULT_COOLDOWN_MINUTES = 60
 _MIN_COOLDOWN_MINUTES = 1
-_MAX_COOLDOWN_MINUTES = 1440  # 24 horas
+_MAX_COOLDOWN_MINUTES = 1440  # 24 hours
 
 
 def validate_cooldown_minutes(minutes):
-    """Valida y devuelve el cooldown en minutos.
+    """Validate and return a cooldown interval in minutes.
 
     Parameters
     ----------
     minutes : int | str | None
-        Valor a validar.  Puede ser un entero, un string numérico (p.ej. '120')
-        o None para usar el valor por defecto.
+        The candidate cooldown value.  Strings that represent whole
+        numbers (e.g. ``'120'``) are accepted and converted to ``int``.
 
     Returns
     -------
     int
-        El cooldown validado en minutos, o 60 si *minutes* es None.
+        The validated cooldown in minutes.
+        Returns ``60`` (the default) when *minutes* is ``None``.
 
     Raises
     ------
     ValueError
-        Si *minutes* es cero, negativo, no numérico, NaN, o mayor que 1440.
+        If *minutes* is zero, negative, non-numeric, NaN, or greater
+        than 1440 (24 hours).
     """
-    # Caso None → default
+    # ── None → default ───────────────────────────────────────────────
     if minutes is None:
         return _DEFAULT_COOLDOWN_MINUTES
 
-    # Intentar convertir a entero
-    # Aceptamos int o string numérico; rechazamos float NaN/infinito y strings
-    # no numéricos.
+    # ── Reject float NaN explicitly (math.nan, float('nan'), …) ──────
     if isinstance(minutes, float):
-        if math.isnan(minutes) or math.isinf(minutes):
+        if math.isnan(minutes):
             raise ValueError(
-                f"El cooldown debe ser un número entero válido; "
-                f"se recibió: {minutes!r}"
+                "cooldown_minutes must be a whole number between "
+                f"{_MIN_COOLDOWN_MINUTES} and {_MAX_COOLDOWN_MINUTES}; "
+                "got NaN."
             )
-        # Permitir floats que sean valores enteros exactos (p.ej. 60.0)
-        if minutes != int(minutes):
-            raise ValueError(
-                f"El cooldown debe ser un número entero (sin decimales); "
-                f"se recibió: {minutes!r}"
-            )
-        value = int(minutes)
-    elif isinstance(minutes, bool):
-        # bool es subclase de int en Python, pero semánticamente no es válido
+        # Reject non-integer floats silently converted to int would lose
+        # precision – treat any float path as non-numeric.
         raise ValueError(
-            f"El cooldown debe ser un número entero, no un booleano; "
-            f"se recibió: {minutes!r}"
+            "cooldown_minutes must be an integer or a numeric string, "
+            f"not a float ({minutes!r}).  "
+            f"Accepted range: {_MIN_COOLDOWN_MINUTES}–{_MAX_COOLDOWN_MINUTES}."
         )
-    elif isinstance(minutes, int):
-        value = minutes
-    elif isinstance(minutes, str):
+
+    # ── String → int conversion ───────────────────────────────────────
+    if isinstance(minutes, str):
         stripped = minutes.strip()
         if not stripped:
             raise ValueError(
-                "El cooldown no puede ser una cadena vacía; "
-                "se esperaba un entero entre 1 y 1440."
+                "cooldown_minutes must not be an empty string.  "
+                f"Accepted range: {_MIN_COOLDOWN_MINUTES}–{_MAX_COOLDOWN_MINUTES}."
             )
         try:
-            value = int(stripped)
+            minutes = int(stripped)
         except ValueError:
             raise ValueError(
-                f"El cooldown debe ser un string numérico entero; "
-                f"se recibió: {minutes!r}"
+                f"cooldown_minutes must be a numeric string, got {stripped!r}.  "
+                f"Accepted range: {_MIN_COOLDOWN_MINUTES}–{_MAX_COOLDOWN_MINUTES}."
             )
-    else:
+
+    # ── Must be an integer at this point ─────────────────────────────
+    if not isinstance(minutes, int):
         raise ValueError(
-            f"El cooldown debe ser un entero o string numérico; "
-            f"se recibió un valor de tipo {type(minutes).__name__!r}: {minutes!r}"
+            f"cooldown_minutes must be an integer or a numeric string, "
+            f"got {minutes!r} ({type(minutes).__name__}).  "
+            f"Accepted range: {_MIN_COOLDOWN_MINUTES}–{_MAX_COOLDOWN_MINUTES}."
         )
 
-    # Validación de rango
-    if value <= 0:
+    # ── Range check ───────────────────────────────────────────────────
+    if minutes <= 0:
         raise ValueError(
-            f"El cooldown debe ser mayor que cero; "
-            f"se recibió: {value} (mínimo permitido: {_MIN_COOLDOWN_MINUTES} minuto)."
-        )
-    if value > _MAX_COOLDOWN_MINUTES:
-        raise ValueError(
-            f"El cooldown no puede superar {_MAX_COOLDOWN_MINUTES} minutos (24 horas); "
-            f"se recibió: {value}."
+            f"cooldown_minutes must be at least {_MIN_COOLDOWN_MINUTES}, "
+            f"got {minutes}.  Zero and negative values are not allowed."
         )
 
-    return value
+    if minutes > _MAX_COOLDOWN_MINUTES:
+        raise ValueError(
+            f"cooldown_minutes must be at most {_MAX_COOLDOWN_MINUTES} "
+            f"(24 hours), got {minutes}."
+        )
+
+    return minutes
