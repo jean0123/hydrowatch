@@ -8,7 +8,7 @@ Archivos PUROS — solo stdlib + pytest, sin imports de Django.
 import math
 import pytest
 
-from django_app.alerts.rule_validators import validate_alert_rule
+from alerts.rule_validators import validate_alert_rule
 
 
 # ---------------------------------------------------------------------------
