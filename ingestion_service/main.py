@@ -243,7 +243,25 @@ def _parse_csv_readings(station_id: str, csv_text: str, hours: int) -> list[dict
 
 
 def _generate_demo_readings(station_id: str, hours: int) -> list[dict]:
-    """Generate synthetic water level data for demonstration."""
+    """Generate synthetic water level data for demonstration.
+
+    Args:
+        station_id: Hydrometric station identifier string.
+        hours: Number of hours of synthetic data to generate. Must be a
+               positive integer (>= 1).
+
+    Raises:
+        ValueError: If ``hours`` is not a positive integer.
+    """
+    if not isinstance(hours, int) or isinstance(hours, bool):
+        raise ValueError(
+            f"hours must be a positive integer, got {type(hours).__name__!r}"
+        )
+    if hours < 1:
+        raise ValueError(
+            f"hours must be >= 1, got {hours!r}"
+        )
+
     import math
     import hashlib
 
