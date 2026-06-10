@@ -3,8 +3,6 @@
 import os
 import statistics
 
-import anthropic
-
 
 def generate_summary(station, readings):
     """Generate a natural-language summary of water level data using Claude."""
@@ -17,6 +15,7 @@ def generate_summary(station, readings):
 
     data_context = _build_data_context(station, readings)
 
+    import anthropic  # noqa: PLC0415 — lazy import to avoid load-time side-effects
     client = anthropic.Anthropic(api_key=api_key)
     message = client.messages.create(
         model="claude-3-haiku-20240307",
@@ -39,6 +38,10 @@ def generate_summary(station, readings):
 
 def _build_data_context(station, readings):
     """Build a text summary of the data for the LLM prompt."""
+    if not readings:
+        raise ValueError(
+            f"readings must not be empty for station {station.name!r}"
+        )
     levels = [r.water_level_m for r in readings]
     flows = [r.flow_rate_cms for r in readings if r.flow_rate_cms is not None]
 
