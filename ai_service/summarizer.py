@@ -47,6 +47,8 @@ def generate_summary(station, readings):
 
 def _build_data_context(station, readings):
     """Build a text summary of the data for the LLM prompt."""
+    if not readings:
+        raise ValueError("readings must not be empty")
     levels = [r.water_level_m for r in readings]
     flows = [r.flow_rate_cms for r in readings if r.flow_rate_cms is not None]
 
