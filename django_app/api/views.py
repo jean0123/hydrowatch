@@ -29,6 +29,7 @@ class StationViewSet(viewsets.ReadOnlyModelViewSet):
         readings = WaterLevelReading.objects.filter(station=station).order_by(
             "-timestamp"
         )[:500]
+        # comentario de jean testing!
         serializer = WaterLevelReadingSerializer(readings, many=True)
         return Response(serializer.data)
 
