@@ -31,7 +31,7 @@ def ingest_all_stations(self):
         resp.raise_for_status()
         result = resp.json()
         logger.info(
-            "Ingestion complete: %d stations, %d readings, %d errors",
+            "Ingestion complete: %d stations, %d readings, %d errors Mamamamamamamamamamamama",
             result["stations_upserted"],
             result["readings_inserted"],
             len(result["errors"]),
