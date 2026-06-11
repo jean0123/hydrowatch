@@ -8,6 +8,14 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
 
+from alerts.cooldown_validators import validate_cooldown_minutes
+
+# Cooldown validated once at module load; raises ValueError for bad config.
+_ALERT_COOLDOWN_MINUTES = validate_cooldown_minutes(
+    getattr(settings, "ALERT_COOLDOWN_MINUTES", None)
+)
+_ALERT_COOLDOWN_SECONDS = _ALERT_COOLDOWN_MINUTES * 60
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,10 +72,10 @@ def evaluate_alerts():
             continue
 
         if rule.evaluate(value):
-            # Cooldown: don't re-trigger within 1 hour
+            # Cooldown: don't re-trigger within the configured cooldown window
             if rule.last_triggered and (
                 timezone.now() - rule.last_triggered
-            ).total_seconds() < 3600:
+            ).total_seconds() < _ALERT_COOLDOWN_SECONDS:
                 continue
 
             message = (
