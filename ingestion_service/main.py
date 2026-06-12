@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 
 from config import settings
+from station_validators import validate_coordinates
 
 engine = create_engine(settings.database_url, pool_pre_ping=True)
 
@@ -101,6 +102,7 @@ async def ingest_stations():
     with engine.connect() as conn:
         for s in DEMO_STATIONS:
             try:
+                validate_coordinates(s["station_id"], s["latitude"], s["longitude"])
                 conn.execute(
                     text("""
                         INSERT INTO dashboard_station

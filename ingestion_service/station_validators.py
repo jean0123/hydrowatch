@@ -8,6 +8,27 @@ import re
 _STATION_ID_RE = re.compile(r"^\d{2}[A-Z]{2}\d{3}$", re.ASCII)
 
 
+def validate_coordinates(station_id: str, latitude: float, longitude: float) -> None:
+    """Validate that latitude and longitude are within valid geographic ranges.
+
+    Latitude must be between -90 and 90 (inclusive).
+    Longitude must be between -180 and 180 (inclusive).
+
+    Raises ValueError with a message that includes the station_id and the
+    invalid value if either coordinate is out of range.
+    """
+    if not (-90 <= latitude <= 90):
+        raise ValueError(
+            f"Station {station_id!r}: latitude {latitude!r} is out of range "
+            f"[-90, 90]."
+        )
+    if not (-180 <= longitude <= 180):
+        raise ValueError(
+            f"Station {station_id!r}: longitude {longitude!r} is out of range "
+            f"[-180, 180]."
+        )
+
+
 def validate_station_id(station_id: str) -> str:
     """Validate and normalise a hydrometric station ID.
 
