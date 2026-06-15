@@ -95,8 +95,13 @@
 
         <!-- Recent Readings -->
         <div class="glass-card animate-in">
-            <div class="card-header">
-                <i class="bi bi-table" style="color: var(--hw-cyan);"></i> Recent Readings
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div><i class="bi bi-table" style="color: var(--hw-cyan);"></i> Recent Readings</div>
+                <a id="downloadCsvBtn"
+                   href="{% url 'dashboard:station_download_csv' station.id %}?days=7"
+                   class="btn btn-glass btn-sm">
+                    <i class="bi bi-download"></i> Download CSV
+                </a>
             </div>
             <div style="max-height: 320px; overflow-y: auto;">
                 <table class="table table-hover mb-0" id="readingsTable">
@@ -143,6 +148,13 @@
 
     async function loadChart() {
         const days = document.getElementById('chartDays').value;
+
+        // Keep the CSV download button in sync with the selected time range.
+        const csvBtn = document.getElementById('downloadCsvBtn');
+        if (csvBtn) {
+            csvBtn.href = `/station/${stationId}/download-csv/?days=${days}`;
+        }
+
         const data = await (await fetch(`/station/${stationId}/chart-data/?days=${days}`)).json();
         if (chart) chart.destroy();
 
