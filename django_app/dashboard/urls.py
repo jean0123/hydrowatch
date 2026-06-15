@@ -12,4 +12,9 @@ urlpatterns = [
         views.station_chart_data,
         name="station_chart_data",
     ),
+    path(
+        "station/<int:station_id>/download-csv/",
+        views.station_download_csv,
+        name="station_download_csv",
+    ),
 ]
