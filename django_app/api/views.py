@@ -1,3 +1,7 @@
+import statistics
+from datetime import timedelta
+
+from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -14,6 +18,14 @@ from .serializers import (
     StationSerializer,
     WaterLevelReadingSerializer,
 )
+
+# SEN-71: stats endpoint range options (default: 7d)
+_RANGE_MAP = {
+    "24h": timedelta(hours=24),
+    "7d": timedelta(days=7),
+    "30d": timedelta(days=30),
+}
+_DEFAULT_RANGE = "7d"
 
 
 class StationViewSet(viewsets.ReadOnlyModelViewSet):
@@ -41,6 +53,74 @@ class StationViewSet(viewsets.ReadOnlyModelViewSet):
         )[:500]
         serializer = PrecipitationReadingSerializer(readings, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=["get"])
+    def stats(self, request, pk=None):
+        """Return min, max and mean of water level and flow rate over a time range.
+
+        SEN-71: GET /api/stations/{id}/stats/?range=24h|7d|30d (default 7d).
+        Uses the same statistical logic as reports/summarizer.py.
+        """
+        range_param = request.query_params.get("range", _DEFAULT_RANGE)
+        delta = _RANGE_MAP.get(range_param)
+        if delta is None:
+            return Response(
+                {
+                    "error": (
+                        f"Invalid range {range_param!r}. "
+                        f"Valid options: {', '.join(_RANGE_MAP)}."
+                    )
+                },
+                status=400,
+            )
+
+        station = self.get_object()
+        since = timezone.now() - delta
+        readings = list(
+            WaterLevelReading.objects.filter(
+                station=station, timestamp__gte=since
+            ).order_by("timestamp")
+        )
+
+        if not readings:
+            return Response(
+                {
+                    "station": station.pk,
+                    "range": range_param,
+                    "count": 0,
+                    "water_level_m": None,
+                    "flow_rate_cms": None,
+                }
+            )
+
+        levels = [r.water_level_m for r in readings]
+        flows = [r.flow_rate_cms for r in readings if r.flow_rate_cms is not None]
+
+        water_level_stats = {
+            "min": min(levels),
+            "max": max(levels),
+            "mean": statistics.mean(levels),
+        }
+
+        flow_rate_stats = (
+            {
+                "min": min(flows),
+                "max": max(flows),
+                "mean": statistics.mean(flows),
+            }
+            if flows
+            else None
+        )
+
+        return Response(
+            {
+                "station": station.pk,
+                "range": range_param,
+                "count": len(readings),
+                "water_level_m": water_level_stats,
+                "flow_rate_cms": flow_rate_stats,
+            }
+        )
 
 
 class WaterLevelReadingViewSet(viewsets.ReadOnlyModelViewSet):
